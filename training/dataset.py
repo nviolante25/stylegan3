@@ -223,7 +223,6 @@ class ImageFolderDataset(Dataset):
                     image = np.array(PIL.Image.open(f))
                 else:
                     image = cv.cvtColor(cv.imread(f.name, cv.IMREAD_ANYCOLOR | cv.IMREAD_ANYDEPTH), cv.COLOR_BGR2RGB)
-                    assert image.max() <= 1.0
                     image = (255 * image).astype(np.uint8)
 
         if image.ndim == 2:
