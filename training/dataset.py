@@ -15,6 +15,8 @@ import PIL.Image
 import json
 import torch
 import dnnlib
+import cv2 as cv
+os.environ["OPENCV_IO_ENABLE_OPENEXR"] = "1"
 
 try:
     import pyspng
@@ -172,7 +174,9 @@ class ImageFolderDataset(Dataset):
             raise IOError('Path must point to a directory or zip')
 
         PIL.Image.init()
-        self._image_fnames = sorted(fname for fname in self._all_fnames if self._file_ext(fname) in PIL.Image.EXTENSION)
+        supported_files = PIL.Image.EXTENSION
+        supported_files[".exr"] = ".exr"
+        self._image_fnames = sorted(fname for fname in self._all_fnames if self._file_ext(fname) in supported_files)
         if len(self._image_fnames) == 0:
             raise IOError('No image files found in the specified path')
 
@@ -215,7 +219,13 @@ class ImageFolderDataset(Dataset):
             if pyspng is not None and self._file_ext(fname) == '.png':
                 image = pyspng.load(f.read())
             else:
-                image = np.array(PIL.Image.open(f))
+                if f.name[-3:] != "exr":
+                    image = np.array(PIL.Image.open(f))
+                else:
+                    image = cv.cvtColor(cv.imread(f.name, cv.IMREAD_ANYCOLOR | cv.IMREAD_ANYDEPTH), cv.COLOR_BGR2RGB)
+                    assert image.max() <= 1.0
+                    image = (255 * image).astype(np.uint8)
+
         if image.ndim == 2:
             image = image[:, :, np.newaxis] # HW => HWC
         image = image.transpose(2, 0, 1) # HWC => CHW
